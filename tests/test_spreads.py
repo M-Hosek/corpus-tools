@@ -97,22 +97,31 @@ def test_bilevel_spread_white_gutter_found():
 
 
 def make_bilevel_spread_narrow_gap_in_window(w=3600, h=2600, gutter_w=130,
+                                              gutter_frac=0.42,
                                               narrow_gap_w=40,
-                                              narrow_gap_x=1500) -> Image.Image:
-    """True wide gutter at center, plus a narrow inter-column gap deliberately
-    placed *inside* the 35-65% central search window (at 1500/3600 = 41.7%).
+                                              narrow_gap_frac=0.492) -> Image.Image:
+    """True wide gutter off-center (42% of width), plus a narrow inter-column
+    gap placed *closer to content center* (49.2%) than the true gutter's cut
+    point.
 
-    Both the narrow gap and the true gutter fall inside the window, so this
-    only passes if the minimum-run-width defense -- not window position --
-    is what rejects the narrow gap.
+    Both bands fall inside the 35-65% central search window, but here the
+    narrow gap is nearer the geometric centre than the true gutter is. That
+    means the centre-distance tie-break, on its own, would prefer the narrow
+    gap over the true gutter. Only the minimum-run-width filter -- which
+    rejects the narrow (40px, well under the ~54px minimum) gap in favour of
+    the wide (130px) true gutter -- makes this test pass.
     """
     a = np.full((h, w), 255, dtype=np.uint8)
-    gx = w // 2
+    gx_true = int(w * gutter_frac)
     margin = 120
-    lo, hi = margin, gx - gutter_w // 2
-    _draw_text_lines(a, lo, narrow_gap_x - narrow_gap_w // 2)
-    _draw_text_lines(a, narrow_gap_x + narrow_gap_w // 2, hi)
-    _draw_text_lines(a, gx + gutter_w // 2, w - margin)
+    # Left page: a single, unsplit text column.
+    _draw_text_lines(a, margin, gx_true - gutter_w // 2)
+    # Right page: split by a narrow inter-column gap nearer content center
+    # than the true gutter.
+    rlo, rhi = gx_true + gutter_w // 2, w - margin
+    narrow_gap_x = int(w * narrow_gap_frac)
+    _draw_text_lines(a, rlo, narrow_gap_x - narrow_gap_w // 2)
+    _draw_text_lines(a, narrow_gap_x + narrow_gap_w // 2, rhi)
     return Image.fromarray(a).convert("RGB")
 
 
@@ -129,18 +138,20 @@ def test_bilevel_spread_off_center_gutter_beats_column_gap():
 
 
 def test_bilevel_spread_narrow_window_gap_loses_to_true_gutter():
-    # Both the narrow inter-column gap (~41.7%) and the true wide gutter
-    # (50%) fall inside the 35-65% search window. The narrow gap (40px, well
-    # under the ~54px minimum run width for this content) must lose to the
-    # true 130px gutter, which must win on width, not on window position.
+    # The true wide gutter sits at 42% of width, while the narrow inter-
+    # column gap sits at 49.2% -- closer to content center. Both fall inside
+    # the 35-65% search window, and the narrow gap is nearer to center, so
+    # the centre-distance tie-break alone would prefer it. The narrow gap
+    # (40px, well under the ~54px minimum run width for this content) must
+    # still lose to the true 130px gutter: only the min-run-width filter, not
+    # window position or center distance, can produce that result.
     img = make_bilevel_spread_narrow_gap_in_window()
     gray = np.array(img.convert("L"))
     bbox = find_content_bbox(gray)
-    w = bbox[2]
     gx = find_gutter_x(gray, bbox)
     assert gx is not None
-    assert abs(gx - w // 2) < 70          # lands at the true center gutter
-    assert abs(gx - 1500) > 100           # not at the narrow window-gap
+    assert abs(gx - 1512) < 70            # lands at the true (off-center) gutter
+    assert abs(gx - 1771) > 100           # not at the narrow, near-center gap
 
 
 def test_bilevel_spread_split_sides():
