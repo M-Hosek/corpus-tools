@@ -12,13 +12,13 @@ SPREAD_MIN_ASPECT = 1.1
 
 def find_content_bbox(gray: np.ndarray) -> tuple[int, int, int, int]:
     _, mask = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, np.ones((31, 31), np.uint8))
-    n, _, stats, _ = cv2.connectedComponentsWithStats(mask)
-    if n < 2:
+    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, np.ones((9, 9), np.uint8))
+    ys, xs = np.where(mask != 0)
+    if ys.size == 0:
         return (0, 0, gray.shape[1], gray.shape[0])
-    i = 1 + int(np.argmax(stats[1:, cv2.CC_STAT_AREA]))
-    return (int(stats[i, cv2.CC_STAT_LEFT]), int(stats[i, cv2.CC_STAT_TOP]),
-            int(stats[i, cv2.CC_STAT_WIDTH]), int(stats[i, cv2.CC_STAT_HEIGHT]))
+    x0, x1 = int(xs.min()), int(xs.max())
+    y0, y1 = int(ys.min()), int(ys.max())
+    return (x0, y0, x1 - x0 + 1, y1 - y0 + 1)
 
 
 def find_gutter_x(gray: np.ndarray, bbox: tuple[int, int, int, int]) -> int | None:
