@@ -96,6 +96,26 @@ def test_bilevel_spread_white_gutter_found():
     assert abs(gx - 1800) < 70          # inside the 130px gutter band at center
 
 
+def make_bilevel_spread_narrow_gap_in_window(w=3600, h=2600, gutter_w=130,
+                                              narrow_gap_w=40,
+                                              narrow_gap_x=1500) -> Image.Image:
+    """True wide gutter at center, plus a narrow inter-column gap deliberately
+    placed *inside* the 35-65% central search window (at 1500/3600 = 41.7%).
+
+    Both the narrow gap and the true gutter fall inside the window, so this
+    only passes if the minimum-run-width defense -- not window position --
+    is what rejects the narrow gap.
+    """
+    a = np.full((h, w), 255, dtype=np.uint8)
+    gx = w // 2
+    margin = 120
+    lo, hi = margin, gx - gutter_w // 2
+    _draw_text_lines(a, lo, narrow_gap_x - narrow_gap_w // 2)
+    _draw_text_lines(a, narrow_gap_x + narrow_gap_w // 2, hi)
+    _draw_text_lines(a, gx + gutter_w // 2, w - margin)
+    return Image.fromarray(a).convert("RGB")
+
+
 def test_bilevel_spread_off_center_gutter_beats_column_gap():
     # Gutter at 42% of width; a narrow inter-column gap falls inside the
     # central search window and must NOT be chosen (and must not block a find).
@@ -108,6 +128,21 @@ def test_bilevel_spread_off_center_gutter_beats_column_gap():
     assert band_lo <= gx <= band_hi
 
 
+def test_bilevel_spread_narrow_window_gap_loses_to_true_gutter():
+    # Both the narrow inter-column gap (~41.7%) and the true wide gutter
+    # (50%) fall inside the 35-65% search window. The narrow gap (40px, well
+    # under the ~54px minimum run width for this content) must lose to the
+    # true 130px gutter, which must win on width, not on window position.
+    img = make_bilevel_spread_narrow_gap_in_window()
+    gray = np.array(img.convert("L"))
+    bbox = find_content_bbox(gray)
+    w = bbox[2]
+    gx = find_gutter_x(gray, bbox)
+    assert gx is not None
+    assert abs(gx - w // 2) < 70          # lands at the true center gutter
+    assert abs(gx - 1500) > 100           # not at the narrow window-gap
+
+
 def test_bilevel_spread_split_sides():
     parts, gx = split_spread(make_bilevel_spread())
     assert [s for s, _ in parts] == ["L", "R"]
@@ -118,3 +153,38 @@ def test_bilevel_single_page_not_split():
     parts, gx = split_spread(make_bilevel_single())
     assert [s for s, _ in parts] == ["F"]
     assert gx is None
+
+
+def make_bilevel_spread_dense_column(w=3600, h=2600, gutter_w=130) -> Image.Image:
+    """Ordinary bilevel spread, plus a dense ink block (e.g. a table or bold
+    heading) inside the central search window whose smoothed column-mean dip
+    exceeds GUTTER_MIN_DEPTH -- a false dark-valley candidate -- while the
+    true gutter is a genuine bright band elsewhere in the window.
+    """
+    gx_true = w // 2
+    a = np.full((h, w), 255, dtype=np.uint8)
+    margin = 120
+    for lo, hi in [(margin, gx_true - gutter_w // 2), (gx_true + gutter_w // 2, w - margin)]:
+        _draw_text_lines(a, lo, hi)
+    # Dense block: much higher line frequency than ordinary text, entirely
+    # inside the 35-65% window (1260-2340) and away from the true gutter band.
+    dense_lo, dense_hi = 1300, 1500
+    for ty in range(200, h - 200, 10):
+        a[ty:ty + 6, dense_lo:dense_hi] = 0
+    return Image.fromarray(a).convert("RGB")
+
+
+def test_bilevel_dense_column_does_not_beat_true_gutter():
+    # A dense ink block's smoothed brightness dip (~57 levels) comfortably
+    # clears GUTTER_MIN_DEPTH=20, so an unguarded dark-valley detector would
+    # wrongly split inside the block (~36.5%). It must be rejected (the
+    # block is a textured ink region, not a uniform shadow) so detection
+    # falls through to the true gutter at 50%.
+    img = make_bilevel_spread_dense_column()
+    gray = np.array(img.convert("L"))
+    bbox = find_content_bbox(gray)
+    w = bbox[2]
+    gx = find_gutter_x(gray, bbox)
+    assert gx is not None
+    assert abs(gx - w // 2) < 70          # true gutter, not the dense column
+    assert abs(gx - 1315) > 150           # nowhere near the dense-column dip

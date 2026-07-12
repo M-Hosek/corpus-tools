@@ -6,6 +6,11 @@ from PIL import Image
 
 # Gutter must be at least this many gray levels darker than the page median.
 GUTTER_MIN_DEPTH = 20
+# A dark-valley candidate's vertical pixel std must be at most this: a real
+# shadow gutter is continuous-tone (near-uniform top to bottom), while a dense
+# ink column (table, bold heading, halftone) that happens to average dark is a
+# black/white texture with much higher vertical variance.
+GUTTER_MAX_STD = 60.0
 # A content region narrower than 1.1x its height is a single page, not a spread.
 SPREAD_MIN_ASPECT = 1.1
 # --- Ink-valley detection (bright gutters, e.g. bilevel scans) -------------
@@ -44,7 +49,20 @@ def _dark_valley_gutter(region: np.ndarray, w: int) -> int | None:
     col = np.convolve(col, np.ones(31) / 31, mode="same")
     lo, hi = int(w * 0.35), int(w * 0.65)
     gx = lo + int(np.argmin(col[lo:hi]))
-    if np.median(col) - col[gx] < GUTTER_MIN_DEPTH:
+    median = np.median(col)
+    depth = median - col[gx]
+    if depth < GUTTER_MIN_DEPTH:
+        return None
+
+    # Validate before trusting this candidate over the ink-valley fallback.
+    # A real shadow gutter is continuous-tone (near-uniform top to bottom); a
+    # dense ink column (table, bold heading, halftone) that happens to average
+    # dark is a black/white texture with much higher vertical pixel variance,
+    # even though its smoothed mean can dip just as far below the median.
+    # Measured on real scans: genuine shadow gutters have vertical std
+    # 20-40; a synthetic dense-ink-column false positive measures ~124.
+    vstd = float(region[:, max(0, gx - 5):gx + 6].std())
+    if vstd > GUTTER_MAX_STD:
         return None
     return gx
 
