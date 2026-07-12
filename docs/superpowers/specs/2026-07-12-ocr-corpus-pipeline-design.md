@@ -4,6 +4,16 @@
 **Status:** Approved in brainstorm; pending review of written spec
 **Project:** Rebuilding a reliable, analysis-grade text corpus from ~3,000+ pages of scanned, photocopied Chinese science fiction magazines with imperfect (~70% accurate) embedded OCR.
 
+## 0. Source material findings (2026-07-12 inspection)
+
+Inspection of the delivered corpus (231 PDFs, 5.67 GB, `incoming/sf magazines 2025/`) established:
+
+- **Contents:** 科学文艺 (Kexue Wenyi) 1979.1–1988.6 plus 少年科技 (Shaonian Keji) 1977, one folder per issue, each issue split across ~4–6 scanner-batch-named PDF chunks (`NNNN_NNN.pdf`). **Folder name = issue identity** — cataloging is simpler than the "messy chunks" assumption. Gaps to confirm with owner: no 1982 folders; scan batch 0868 absent.
+- **Scan format:** each PDF page is a **two-page spread** of the bound magazine on a flatbed (Canon; ~4299×3035 px RGB at native 300 DPI, 14.3×10.1 in landscape; occasional larger 16.5×11.7 in pages, likely covers/foldouts). Visible: dark scanner background and book edges around pages, center gutter shadow, mild page curvature near the spine, yellowed paper, some bleed-through. Print quality of the sample is good — clean typeset text, not degraded photocopy.
+- **Embedded OCR (run 0):** present, simplified Chinese, with characteristic errors (component-split characters like 衤丙 for 柄, visually-similar substitutions 包/色, 超/起, stray Greek/symbol garbage θ ρ ¤). Consistent with the ~70% estimate on hard pages; likely better on clean body text. Reading order/column errors expected to be significant.
+
+**Design consequences:** (a) ingest gains a **spread-splitting stage** — detect content region, split at the gutter, crop scanner background — so the atomic unit remains the *magazine page*, with page-ids like `<hash>-p003L`/`p003R`; printed page numbers (visible in scans) can be OCR'd to validate split/ordering. (b) Rendering DPI is moot: embedded 300 DPI scan images are **extracted losslessly**, not re-rendered. (c) Preprocessing priorities: gutter/edge masking, curvature-aware deskew, background flattening, bleed-through suppression.
+
 ## 1. Goals and constraints
 
 **Primary deliverable:** an analysis-grade plain-text corpus suitable for digital-humanities work (quotation, word frequency, topic modeling). **Secondary deliverable:** rebuilt searchable PDFs. Accuracy therefore matters more than coverage; evaluation and human-correction loops are first-class components.
@@ -114,9 +124,10 @@ Coordinator/app layer: designed after Phase 4 from actual usage.
 1. **Workspace location:** C: drive on this machine (225 GB free; estimated footprint 30–80 GB). Source PDFs staged in `C:\Users\<user>\pdf_processing\incoming\`; the copy remaining on the professor's other computer serves as the off-machine backup of originals. Irreplaceable artifacts: `originals/`, `catalog.db`, `ground_truth/`, `ocr/runs/`. Regenerable: `pages/`, `preprocessed/`.
 2. **Glyph policy:** store as-OCR'd; normalize at export time only.
 
+3. **Rendering DPI:** resolved — scans are native 300 DPI embedded images; extract losslessly rather than re-render.
+4. **Sample-PDF review:** done 2026-07-12; findings in §0.
+
 **Pending (none block Phase 1 implementation start):**
 
-3. **Rendering DPI:** recommend 300 (OCR sweet spot), 400 if characters prove small — confirm by inspecting sample PDFs on arrival. Cheap to decide, expensive to change later.
-4. **Sample-PDF review:** examine 3–5 representative source PDFs before finalizing ingest details (embedded OCR format, page dimensions, encoding of filenames).
 5. **Cloud provider/budget for T3:** Claude vision API is the natural fit; budget decision deferred until assess reveals the size of the T3 population.
 6. **Ground-truth transcription protocol:** one-page written convention (illegible-character placeholder `□`, line breaks, punctuation variants) to be drafted and agreed before correcting page one. Draft: `docs/superpowers/specs/2026-07-12-ground-truth-protocol.md`.
