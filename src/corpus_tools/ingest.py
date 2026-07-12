@@ -52,6 +52,10 @@ def _ingest_pdf(ws: Workspace, cat, pdf: Path, stats: dict) -> None:
 
     dest = ws.originals_dir / issue_label / pdf.name
     dest.parent.mkdir(parents=True, exist_ok=True)
+    if dest.exists() and sha256_file(dest) != source_id:
+        # Same filename, different bytes: don't let the new source_id get
+        # paired with the old file's content. Disambiguate by content hash.
+        dest = dest.parent / f"{dest.stem}.{source_id[:6]}{dest.suffix}"
     if not dest.exists():
         shutil.copy2(pdf, dest)
 
@@ -93,6 +97,12 @@ def _ingest_pdf(ws: Workspace, cat, pdf: Path, stats: dict) -> None:
 def _page_already_ingested(ws: Workspace, cat, source_id: str, idx: int) -> bool:
     rows = cat.iter_pages("source_id = ? AND pdf_page_index = ?", (source_id, idx))
     if not rows:
+        return False
+    sides = {row["side"] for row in rows}
+    if sides not in ({"L", "R"}, {"F"}):
+        # A crash between committing one side and the other leaves a lone
+        # {L} or {R}: incomplete, must be reprocessed (writes are
+        # exists-guarded and inserts are OR IGNORE, so this is safe).
         return False
     for row in rows:
         if not row.get("image_path") or not (ws.root / row["image_path"]).exists():

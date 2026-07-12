@@ -15,8 +15,17 @@ def extract_spread_image(pdf_path: Path, page_index: int) -> Image.Image:
     images = list(page.images)
     if not images:
         raise ValueError(f"{pdf_path} page {page_index}: no embedded images")
-    largest = max(images, key=lambda i: i.image.width * i.image.height)
-    return largest.image
+    areas = [i.image.width * i.image.height for i in images]
+    largest_idx = max(range(len(images)), key=lambda k: areas[k])
+    total = sum(areas)
+    if len(images) > 1 and areas[largest_idx] < 0.9 * total:
+        raise ValueError(
+            f"{pdf_path} page {page_index}: largest embedded image is only "
+            f"{areas[largest_idx] / total:.0%} of the summed image area across "
+            f"{len(images)} images; the page may have been scanned as multiple "
+            f"strips and picking the largest would silently drop content"
+        )
+    return images[largest_idx].image
 
 
 def pdf_has_text(pdf_path: Path) -> bool:

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
 
 
-def main() -> None:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="corpus_tools")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -25,7 +26,7 @@ def main() -> None:
     p = sub.add_parser("report", help="write assessment HTML report")
     p.add_argument("--workspace", type=Path, required=True)
 
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
     if args.cmd == "init":
         from .workspace import init_workspace
         ws = init_workspace(args.workspace, args.name)
@@ -39,6 +40,8 @@ def main() -> None:
               f"pages: {stats['pages']}  errors: {len(stats['errors'])}")
         for e in stats["errors"]:
             print("ERROR:", e)
+        if stats["errors"]:
+            return 1
     elif args.cmd == "assess":
         from .assess_run import assess_workspace
         from .workspace import load_workspace
@@ -47,12 +50,15 @@ def main() -> None:
         print(f"assessed: {stats['assessed']}  errors: {len(stats['errors'])}")
         for e in stats["errors"]:
             print("ERROR:", e)
+        if stats["errors"]:
+            return 1
     elif args.cmd == "report":
         from .report import write_assess_report
         from .workspace import load_workspace
         out = write_assess_report(load_workspace(args.workspace))
         print(f"report: {out}")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
