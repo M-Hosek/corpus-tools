@@ -17,6 +17,11 @@ def main() -> None:
     p.add_argument("--workspace", type=Path, required=True)
     p.add_argument("--limit", type=int, default=None, help="max PDFs (for smoke tests)")
 
+    p = sub.add_parser("assess", help="measure page quality metrics")
+    p.add_argument("--workspace", type=Path, required=True)
+    p.add_argument("--limit", type=int, default=None)
+    p.add_argument("--force", action="store_true", help="re-assess already-assessed pages")
+
     args = ap.parse_args()
     if args.cmd == "init":
         from .workspace import init_workspace
@@ -29,6 +34,14 @@ def main() -> None:
         stats = ingest_folder(ws, args.source, limit=args.limit)
         print(f"new sources: {stats['sources_new']}  skipped: {stats['sources_skipped']}  "
               f"pages: {stats['pages']}  errors: {len(stats['errors'])}")
+        for e in stats["errors"]:
+            print("ERROR:", e)
+    elif args.cmd == "assess":
+        from .assess_run import assess_workspace
+        from .workspace import load_workspace
+        ws = load_workspace(args.workspace)
+        stats = assess_workspace(ws, limit=args.limit, force=args.force)
+        print(f"assessed: {stats['assessed']}  errors: {len(stats['errors'])}")
         for e in stats["errors"]:
             print("ERROR:", e)
 
