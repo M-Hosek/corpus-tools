@@ -1,2 +1,6 @@
 ﻿incoming/
 workspace/
+.superpowers/
+__pycache__/
+*.pyc
+*.egg-info/

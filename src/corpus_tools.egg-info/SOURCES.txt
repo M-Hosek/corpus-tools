@@ -1,8 +1,0 @@
-pyproject.toml
-src/corpus_tools/__init__.py
-src/corpus_tools.egg-info/PKG-INFO
-src/corpus_tools.egg-info/SOURCES.txt
-src/corpus_tools.egg-info/dependency_links.txt
-src/corpus_tools.egg-info/requires.txt
-src/corpus_tools.egg-info/top_level.txt
-tests/test_scaffold.py

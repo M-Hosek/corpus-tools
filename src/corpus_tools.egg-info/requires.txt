@@ -1,8 +1,0 @@
-pypdf>=6
-pillow>=10
-numpy>=2
-opencv-python-headless>=4.10
-pyyaml>=6
-
-[dev]
-pytest>=8
