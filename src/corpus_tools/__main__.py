@@ -22,6 +22,9 @@ def main() -> None:
     p.add_argument("--limit", type=int, default=None)
     p.add_argument("--force", action="store_true", help="re-assess already-assessed pages")
 
+    p = sub.add_parser("report", help="write assessment HTML report")
+    p.add_argument("--workspace", type=Path, required=True)
+
     args = ap.parse_args()
     if args.cmd == "init":
         from .workspace import init_workspace
@@ -44,6 +47,11 @@ def main() -> None:
         print(f"assessed: {stats['assessed']}  errors: {len(stats['errors'])}")
         for e in stats["errors"]:
             print("ERROR:", e)
+    elif args.cmd == "report":
+        from .report import write_assess_report
+        from .workspace import load_workspace
+        out = write_assess_report(load_workspace(args.workspace))
+        print(f"report: {out}")
 
 
 if __name__ == "__main__":
