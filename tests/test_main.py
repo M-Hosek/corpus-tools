@@ -54,3 +54,24 @@ def test_main_assess_exits_zero_without_errors(tmp_path, monkeypatch):
     monkeypatch.setattr(assess_run_mod, "assess_workspace", fake_assess_workspace)
     rc = main_mod.main(["assess", "--workspace", str(ws_path)])
     assert rc == 0
+
+
+def test_gt_and_evaluate_cli(tmp_path, capsys):
+    from test_evaluate import _ws
+    from corpus_tools.__main__ import main
+
+    ws = _ws(tmp_path)
+    root = str(ws.root)
+
+    assert main(["gt-status", "--workspace", root]) == 0
+    out = capsys.readouterr().out
+    assert "done: 3" in out
+
+    assert main(["gt-sample", "--workspace", root, "--n", "2"]) == 0
+
+    assert main(["evaluate", "--workspace", root, "--run", "run0"]) == 0
+    out = capsys.readouterr().out
+    assert "evaluated: 2" in out
+
+    assert main(["eval-report", "--workspace", root, "--run", "run0"]) == 0
+    assert (ws.reports_dir / "eval_run0.html").exists()
