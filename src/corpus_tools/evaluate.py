@@ -19,9 +19,12 @@ def evaluate_run(ws: Workspace, run_id: str) -> dict:
                 stats["skipped"].append(pid)
                 continue
             hyp_path = ws.root / rp["text_path"]
+            if not hyp_path.exists():
+                stats["skipped"].append(pid)
+                continue
             try:
                 ref = gt_path.read_text(encoding="utf-8")
-                hyp = hyp_path.read_text(encoding="utf-8") if hyp_path.exists() else ""
+                hyp = hyp_path.read_text(encoding="utf-8")
                 res = cer(ref, hyp)
             except ValueError:
                 stats["skipped"].append(pid)      # empty reference

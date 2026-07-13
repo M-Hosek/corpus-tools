@@ -50,3 +50,12 @@ def test_evaluate_run_is_rerunnable(tmp_path):
     with ws.open_catalog() as cat:
         assert cat.get_evaluation("run0", "ab1234-p002L", "cer")["value"] == 0.0
         assert cat.count("evaluations") == 2
+
+
+def test_evaluate_run_skips_missing_hyp_file(tmp_path):
+    ws = _ws(tmp_path)
+    (ws.run_dir("run0") / "ab1234-p002L.txt").unlink()
+    stats = evaluate_run(ws, "run0")
+    assert "ab1234-p002L" in stats["skipped"]
+    with ws.open_catalog() as cat:
+        assert cat.get_evaluation("run0", "ab1234-p002L", "cer") is None
