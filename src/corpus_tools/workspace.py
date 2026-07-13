@@ -35,6 +35,14 @@ class Workspace:
     def reports_dir(self) -> Path:
         return self.root / "reports"
 
+    @property
+    def ground_truth_dir(self) -> Path:
+        return self.root / "ground_truth"
+
+    @property
+    def gt_drafts_dir(self) -> Path:
+        return self.root / "ground_truth" / "drafts"
+
     def run_dir(self, run_id: str) -> Path:
         return self.root / "ocr" / "runs" / run_id
 
