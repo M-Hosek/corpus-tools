@@ -63,6 +63,13 @@ CREATE TABLE IF NOT EXISTS evaluations (
     created_at TEXT NOT NULL,
     PRIMARY KEY (run_id, page_id, metric)
 );
+CREATE TABLE IF NOT EXISTS gt_pages (
+    page_id TEXT PRIMARY KEY REFERENCES pages(page_id),
+    stratum TEXT,
+    status TEXT NOT NULL DEFAULT 'selected',
+    selected_at TEXT NOT NULL,
+    completed_at TEXT
+);
 CREATE INDEX IF NOT EXISTS idx_pages_source ON pages(source_id);
 """
 
@@ -168,7 +175,40 @@ class Catalog:
             (run_id, page_id)).fetchone()
         return dict(row) if row else None
 
+    def upsert_gt_page(self, g: dict) -> None:
+        self._write("upsert_gt_page", """
+            INSERT INTO gt_pages (page_id, stratum, status, selected_at, completed_at)
+            VALUES (:page_id, :stratum, :status, :selected_at, :completed_at)
+            ON CONFLICT(page_id) DO UPDATE SET
+                status=excluded.status, completed_at=excluded.completed_at
+        """, g)
+
+    def get_gt_page(self, page_id: str) -> dict | None:
+        row = self.conn.execute("SELECT * FROM gt_pages WHERE page_id = ?",
+                                (page_id,)).fetchone()
+        return dict(row) if row else None
+
+    def iter_gt_pages(self, status: str | None = None) -> list[dict]:
+        sql, params = "SELECT * FROM gt_pages", ()
+        if status:
+            sql, params = sql + " WHERE status = ?", (status,)
+        sql += " ORDER BY page_id"
+        return [dict(r) for r in self.conn.execute(sql, params).fetchall()]
+
+    def add_evaluation(self, ev: dict) -> None:
+        self._write("add_evaluation", """
+            INSERT OR REPLACE INTO evaluations
+                (run_id, page_id, metric, value, details_json, created_at)
+            VALUES (:run_id, :page_id, :metric, :value, :details_json, :created_at)
+        """, ev)
+
+    def get_evaluation(self, run_id: str, page_id: str, metric: str) -> dict | None:
+        row = self.conn.execute(
+            "SELECT * FROM evaluations WHERE run_id = ? AND page_id = ? AND metric = ?",
+            (run_id, page_id, metric)).fetchone()
+        return dict(row) if row else None
+
     def count(self, table: str) -> int:
-        if table not in {"sources", "pages", "ocr_runs", "run_pages", "evaluations"}:
+        if table not in {"sources", "pages", "ocr_runs", "run_pages", "evaluations", "gt_pages"}:
             raise ValueError(table)
         return self.conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]

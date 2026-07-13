@@ -73,3 +73,45 @@ def test_init_schema_idempotent(tmp_path):
     c.init_schema()
     assert c.count("pages") == 0
     c.close()
+
+
+def _mk_cat(tmp_path):
+    from corpus_tools.catalog import Catalog
+    cat = Catalog(tmp_path / "cat.db")
+    cat.init_schema()
+    return cat
+
+
+def test_gt_page_roundtrip(tmp_path):
+    cat = _mk_cat(tmp_path)
+    cat.upsert_gt_page({"page_id": "ab-p001L", "stratum": "1979.1|simplified|mid",
+                        "status": "selected", "selected_at": "2026-07-13T10:00:00",
+                        "completed_at": None})
+    g = cat.get_gt_page("ab-p001L")
+    assert g["status"] == "selected" and g["stratum"] == "1979.1|simplified|mid"
+    # upsert updates status without duplicating
+    cat.upsert_gt_page({"page_id": "ab-p001L", "stratum": "1979.1|simplified|mid",
+                        "status": "done", "selected_at": "2026-07-13T10:00:00",
+                        "completed_at": "2026-07-13T12:00:00"})
+    assert cat.count("gt_pages") == 1
+    assert cat.get_gt_page("ab-p001L")["status"] == "done"
+
+
+def test_iter_gt_pages_filter(tmp_path):
+    cat = _mk_cat(tmp_path)
+    for pid, st in [("ab-p001L", "selected"), ("ab-p002R", "done")]:
+        cat.upsert_gt_page({"page_id": pid, "stratum": "s", "status": st,
+                            "selected_at": "t", "completed_at": None})
+    assert [g["page_id"] for g in cat.iter_gt_pages()] == ["ab-p001L", "ab-p002R"]
+    assert [g["page_id"] for g in cat.iter_gt_pages(status="done")] == ["ab-p002R"]
+
+
+def test_evaluation_upsert(tmp_path):
+    cat = _mk_cat(tmp_path)
+    ev = {"run_id": "run0", "page_id": "ab-p001L", "metric": "cer",
+          "value": 0.31, "details_json": "{}", "created_at": "t1"}
+    cat.add_evaluation(ev)
+    cat.add_evaluation(dict(ev, value=0.12, created_at="t2"))
+    got = cat.get_evaluation("run0", "ab-p001L", "cer")
+    assert got["value"] == 0.12
+    assert cat.count("evaluations") == 1
