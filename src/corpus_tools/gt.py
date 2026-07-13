@@ -51,7 +51,7 @@ def scaffold_sample(ws: Workspace, n: int = 40, seed: int = 1979) -> dict:
 
 
 def sync_gt_status(ws: Workspace) -> dict:
-    stats = {"selected": 0, "done": 0, "adopted": 0}
+    stats = {"selected": 0, "done": 0, "adopted": 0, "strays": []}
     with ws.open_catalog() as cat:
         cat.init_schema()
         known = {g["page_id"]: g for g in cat.iter_gt_pages()}
@@ -67,6 +67,9 @@ def sync_gt_status(ws: Workspace) -> dict:
         for final in sorted(ws.ground_truth_dir.glob("*.txt")):
             pid = final.stem
             if pid in known or not final.read_text(encoding="utf-8").strip():
+                continue
+            if cat.get_page(pid) is None:
+                stats["strays"].append(final.name)
                 continue
             cat.upsert_gt_page({"page_id": pid, "stratum": None, "status": "done",
                                 "selected_at": _now(), "completed_at": _now()})

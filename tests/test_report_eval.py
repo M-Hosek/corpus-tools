@@ -21,3 +21,14 @@ def test_eval_report_no_evaluations_raises(tmp_path):
     ws = _ws(tmp_path)
     with pytest.raises(ValueError):
         write_eval_report(ws, "nope")
+
+
+def test_eval_report_calibration_section(tmp_path):
+    ws = _ws(tmp_path)
+    with ws.open_catalog() as cat:
+        for i, q in [(1, 0.9), (2, 0.4)]:
+            cat.update_page(f"ab1234-p{i:03d}L", {"quality_score": q})
+    evaluate_run(ws, "run0")
+    html_text = write_eval_report(ws, "run0").read_text(encoding="utf-8")
+    assert "Pearson r" in html_text
+    assert "0.900" in html_text and "0.400" in html_text

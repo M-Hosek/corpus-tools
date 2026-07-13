@@ -75,3 +75,13 @@ def test_sync_ignores_empty_final_files(tmp_path):
     (ws.ground_truth_dir / f"{pid}.txt").write_text("  \n", encoding="utf-8")
     stats = sync_gt_status(ws)
     assert stats["done"] == 0
+
+
+def test_sync_ignores_stray_files(tmp_path):
+    ws = _ws_with_pages(tmp_path)
+    (ws.ground_truth_dir / "notes.txt").write_text("stray", encoding="utf-8")
+    stats = sync_gt_status(ws)
+    assert stats["adopted"] == 0
+    assert stats["strays"] == ["notes.txt"]
+    with ws.open_catalog() as cat:
+        assert cat.get_gt_page("notes") is None

@@ -85,6 +85,8 @@ def main(argv: list[str] | None = None) -> int:
         stats = sync_gt_status(load_workspace(args.workspace))
         print(f"done: {stats['done']}  selected: {stats['selected']}  "
               f"adopted: {stats['adopted']}")
+        for name in stats["strays"]:
+            print("STRAY FILE (not a page):", name)
     elif args.cmd == "evaluate":
         from .evaluate import evaluate_run
         from .workspace import load_workspace
