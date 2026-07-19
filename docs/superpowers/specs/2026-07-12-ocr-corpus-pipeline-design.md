@@ -121,7 +121,7 @@ Coordinator/app layer: designed after Phase 4 from actual usage.
 
 **Decided:**
 
-1. **Workspace location:** C: drive on this machine (225 GB free; estimated footprint 30–80 GB). Source PDFs staged in `C:\Users\<user>\pdf_processing\incoming\`; the copy remaining on the professor's other computer serves as the off-machine backup of originals. Irreplaceable artifacts: `originals/`, `catalog.db`, `ground_truth/`, `ocr/runs/`. Regenerable: `pages/`, `preprocessed/`.
+1. **Workspace location:** C: drive on this machine (225 GB free; estimated footprint 30–80 GB). Source PDFs staged in `incoming\` under the repo root; the copy remaining on the professor's other computer serves as the off-machine backup of originals. Irreplaceable artifacts: `originals/`, `catalog.db`, `ground_truth/`, `ocr/runs/`. Regenerable: `pages/`, `preprocessed/`.
 2. **Glyph policy:** store as-OCR'd; normalize at export time only.
 
 3. **Rendering DPI:** resolved — scans are native 300 DPI embedded images; extract losslessly rather than re-render.

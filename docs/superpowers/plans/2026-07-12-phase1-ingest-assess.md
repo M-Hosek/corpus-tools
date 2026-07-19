@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Repo root: `C:\Users\<user>\pdf_processing`. Source PDFs: `incoming\sf magazines 2025\<issue folder>\NNNN_NNN.pdf` (231 files). Commands below run from repo root; PowerShell is the shell.
+- Repo root: the project checkout (Windows). Source PDFs: `incoming\sf magazines 2025\<issue folder>\NNNN_NNN.pdf` (231 files). Commands below run from repo root; PowerShell is the shell.
 - Workspace default location: `workspace/` under repo root (already gitignored, as is `incoming/`).
 - Originals are read-only: ingest copies into `workspace/originals/`, never moves or rewrites source files.
 - Page is the atomic unit. Page-id format: `<sha256-hex-first-6-of-source>-p<3-digit-1-based-pdf-page><L|R|F>` (e.g. `b3f2a1-p003L`). `F` = full/unsplit page (no gutter detected).
