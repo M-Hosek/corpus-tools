@@ -2,6 +2,7 @@
 name = "corpus-tools"
 version = "0.1.0"
 description = "Reusable OCR remediation pipeline for scanned archival corpora"
+license = {text = "MIT"}
 requires-python = ">=3.12"
 dependencies = [
     "pypdf>=6",
