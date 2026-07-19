@@ -1,5 +1,6 @@
 ﻿incoming/
 workspace/
+tests/fixtures/*.pdf
 .superpowers/
 __pycache__/
 *.pyc

@@ -434,6 +434,11 @@ python -m pytest
 accounting, sampling determinism, ingest resume logic, GT adoption guards, and
 both HTML reports.
 
+A handful of integration tests use a real scanner-chunk PDF
+(`tests/fixtures/sample_chunk.pdf`) that is **not distributed** with the
+repository (the source scans are not redistributable); without it those tests
+skip automatically and the rest of the suite runs normally.
+
 ## Current status
 
 *(as of 2026-07-19)*
